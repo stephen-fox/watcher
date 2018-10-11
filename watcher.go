@@ -135,6 +135,23 @@ func (o Changes) IsErr() bool {
 	return o.Err != nil
 }
 
+// ScanFilesInDirectory scans a directory for files ending with a particular
+// suffix.
+//
+// Consider the following file tree:
+//	My Files/
+//	|
+//	|-- SomeFile.txt
+//	|
+//	|-- Awesome.cfg
+//	|
+//	|-- gorbage/
+//	   |
+//	   |-- CoolStoryBro.txt
+//
+// If you specify the root directory to scan as 'My Files', and the file suffix
+// as '.cfg', the function will return a map of file paths to hashes containing
+// 'path/to/My Files/Awesome.cfg'.
 func ScanFilesInDirectory(config Config) Scan {
 	subInfos, err := ioutil.ReadDir(config.RootDirPath)
 	if err != nil {
@@ -167,7 +184,7 @@ func ScanFilesInDirectory(config Config) Scan {
 }
 
 // ScanFilesInSubdirectories scans a directory's subdirectories for files
-// with a particular extension.
+// with a particular suffix.
 //
 // Consider the following file tree:
 //	My Files/
@@ -185,7 +202,8 @@ func ScanFilesInDirectory(config Config) Scan {
 //	   |-- CoolStoryBro.txt
 //
 // If you specify the root directory to scan as 'My Files', and the file suffix
-// as '.cfg', the function will return a map of files to hashes.
+// as '.cfg', the function will return a map of file paths to hashes containing
+// 'path/to/My Files/stuff/Awesome.cfg'.
 func ScanFilesInSubdirectories(config Config) Scan {
 	subInfos, err := ioutil.ReadDir(config.RootDirPath)
 	if err != nil {
