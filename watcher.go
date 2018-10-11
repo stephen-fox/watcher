@@ -71,7 +71,7 @@ func (o *defaultWatcher) loop() {
 			for filePath := range o.last.FilePathsToSha256s {
 				_, ok := current.FilePathsToSha256s[filePath]
 				if !ok {
-					changes.DeletedFilePath = append(changes.DeletedFilePath, filePath)
+					changes.DeletedFilePaths = append(changes.DeletedFilePaths, filePath)
 				}
 			}
 
@@ -128,7 +128,7 @@ func (o Config) IsValid() error {
 type Changes struct {
 	Err              error
 	UpdatedFilePaths []string
-	DeletedFilePath  []string
+	DeletedFilePaths []string
 }
 
 func (o Changes) IsErr() bool {
