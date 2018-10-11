@@ -166,6 +166,26 @@ func ScanFilesInDirectory(config Config) Scan {
 	return result
 }
 
+// ScanFilesInSubdirectories scans a directory's subdirectories for files
+// with a particular extension.
+//
+// Consider the following file tree:
+//	My Files/
+//	|
+//	|-- text-files/
+//	|  |
+//	|  |-- SomeFile.txt
+//	|
+//	|-- stuff/
+//	|  |
+//	|  |-- Awesome.cfg
+//	|
+//	|-- gorbage/
+//	   |
+//	   |-- CoolStoryBro.txt
+//
+// If you specify the root directory to scan as 'My Files', and the file suffix
+// as '.cfg', the function will return a map of files to hashes.
 func ScanFilesInSubdirectories(config Config) Scan {
 	subInfos, err := ioutil.ReadDir(config.RootDirPath)
 	if err != nil {
