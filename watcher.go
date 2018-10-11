@@ -59,9 +59,9 @@ func (o *defaultWatcher) loop() {
 				continue
 			}
 
-			for filePath, sha256Hash := range current.FilePathsToSha256s {
-				currentSha256, ok := o.last.FilePathsToSha256s[filePath]
-				if ok && sha256Hash == currentSha256 {
+			for filePath, currentSha256 := range current.FilePathsToSha256s {
+				lastSha256, exists := o.last.FilePathsToSha256s[filePath]
+				if exists && currentSha256 == lastSha256 {
 					continue
 				}
 
@@ -107,15 +107,15 @@ type Config struct {
 
 func (o Config) IsValid() error {
 	if len(strings.TrimSpace(o.RootDirPath)) == 0 {
-		return errors.New("The specified directory path cannot not be empty")
+		return errors.New("The directory path to watch cannot not be empty")
 	}
 
 	if len(strings.TrimSpace(o.FileSuffix)) == 0 {
-		return errors.New("The specified file extension to match cannot not be empty")
+		return errors.New("The file suffix to match cannot not be empty")
 	}
 
 	if o.Changes == nil {
-		return errors.New("The results channel cannot be nil")
+		return errors.New("The changes channel cannot be nil")
 	}
 
 	if o.ScanFunc == nil {
