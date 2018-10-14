@@ -296,3 +296,95 @@ func TestDefaultWatcher_StopMultipleTimes(t *testing.T) {
 		t.Error("More than one result was produced after stopping multiple times -", count)
 	}
 }
+
+func TestDefaultWatcher_Destroy(t *testing.T) {
+	current, err := os.Getwd()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	config := Config{
+		RefreshDelay: 1 * time.Second,
+		RootDirPath:  current,
+		FileSuffix:   ".go",
+		Changes:      make(chan Changes),
+		ScanFunc:     ScanFilesInDirectory,
+	}
+	w, err := NewWatcher(config)
+	if err != nil {
+		t.Error("Valid config generated an error -", err.Error())
+	}
+
+	w.Start()
+
+	w.Destroy()
+
+	ticker := time.NewTicker(config.RefreshDelay * 2)
+
+	var count int
+	
+	OUTER:
+	for {
+		select {
+		case <-ticker.C:
+			break OUTER
+		case _, ok := <-config.Changes:
+			if ok {
+				count++
+			}
+			break OUTER
+		}
+	}
+
+	if count > 0 {
+		t.Error("More than one result was produced after destroying -", count)
+	}
+}
+
+func TestDefaultWatcher_DestroyMultipleTimes(t *testing.T) {
+	current, err := os.Getwd()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	config := Config{
+		RefreshDelay: 1 * time.Second,
+		RootDirPath:  current,
+		FileSuffix:   ".go",
+		Changes:      make(chan Changes),
+		ScanFunc:     ScanFilesInDirectory,
+	}
+	w, err := NewWatcher(config)
+	if err != nil {
+		t.Error("Valid config generated an error -", err.Error())
+	}
+
+	w.Start()
+
+	w.Destroy()
+	w.Destroy()
+	w.Destroy()
+	w.Destroy()
+	w.Destroy()
+	w.Destroy()
+
+	ticker := time.NewTicker(config.RefreshDelay * 2)
+
+	var count int
+	OUTER:
+	for {
+		select {
+		case <-ticker.C:
+			break OUTER
+		case _, ok := <-config.Changes:
+			if ok {
+				count++
+			}
+			break OUTER
+		}
+	}
+
+	if count > 0 {
+		t.Error("More than one result was produced after destroying multple times -", count)
+	}
+}

@@ -21,6 +21,7 @@ const (
 type Watcher interface {
 	Start()
 	Stop()
+	Destroy()
 }
 
 type defaultWatcher struct {
@@ -28,11 +29,16 @@ type defaultWatcher struct {
 	config Config
 	last   Scan
 	stop   chan struct{}
+	kill   chan struct{}
 }
 
 func (o *defaultWatcher) Start() {
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
+
+	if o.kill == nil {
+		return
+	}
 
 	if o.stop != nil {
 		return
@@ -93,8 +99,22 @@ func (o *defaultWatcher) loop(ready chan struct{}) {
 			o.config.Changes <- changes
 		case <-o.stop:
 			return
+		case <-o.kill:
+			close(o.config.Changes)
+			return
 		}
 	}
+}
+
+func (o *defaultWatcher) Destroy() {
+	o.mutex.Lock()
+	defer o.mutex.Unlock()
+
+	if o.kill != nil {
+		close(o.kill)
+	}
+
+	o.kill = nil
 }
 
 func (o *defaultWatcher) Stop() {
@@ -292,5 +312,6 @@ func NewWatcher(config Config) (Watcher, error) {
 	return &defaultWatcher{
 		mutex:  &sync.Mutex{},
 		config: config,
+		kill:   make(chan struct{}),
 	}, nil
 }
