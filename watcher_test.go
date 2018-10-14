@@ -192,19 +192,22 @@ func TestDefaultWatcher_StartMultipleTimes(t *testing.T) {
 	w.Start()
 	w.Start()
 
+	ticker := time.NewTicker(config.RefreshDelay * 2)
+	defer ticker.Stop()
+
 	var count int
-	for i := 0; i < 5; i++ {
-		time.Sleep(config.RefreshDelay)
+	OUTER:
+	for {
 		select {
 		case <-config.Changes:
 			count++
-		default:
-			continue
+		case <-ticker.C:
+			break OUTER
 		}
 	}
 
-	if count > 5 {
-		t.Error("Too many Changes -", count)
+	if count != 1 {
+		t.Error("Did not receive expected changes -", count)
 	}
 }
 
@@ -230,21 +233,22 @@ func TestDefaultWatcher_Stop(t *testing.T) {
 
 	w.Stop()
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(config.RefreshDelay * 2)
 	defer ticker.Stop()
 
 	var count int
+	OUTER:
 	for {
 		select {
 		case <-ticker.C:
-			return
+			break OUTER
 		case <-config.Changes:
 			count++
 		}
 	}
 
-	if count > 1 {
-		t.Error("More than one result was produced after stopping -", count)
+	if count > 0 {
+		t.Error("Results were produced after stopping -", count)
 	}
 }
 
@@ -274,20 +278,21 @@ func TestDefaultWatcher_StopMultipleTimes(t *testing.T) {
 	w.Stop()
 	w.Stop()
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(config.RefreshDelay * 2)
 	defer ticker.Stop()
 
 	var count int
+	OUTER:
 	for {
 		select {
 		case <-ticker.C:
-			return
+			break OUTER
 		case <-config.Changes:
 			count++
 		}
 	}
 
-	if count > 1 {
+	if count > 0 {
 		t.Error("More than one result was produced after stopping multiple times -", count)
 	}
 }
