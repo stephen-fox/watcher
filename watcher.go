@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,22 +24,32 @@ type Watcher interface {
 }
 
 type defaultWatcher struct {
+	mutex  *sync.Mutex
 	config Config
 	last   Scan
 	stop   chan struct{}
 }
 
 func (o *defaultWatcher) Start() {
+	o.mutex.Lock()
+	defer o.mutex.Unlock()
+
 	if o.stop != nil {
 		return
 	}
 
 	o.stop = make(chan struct{})
 
-	go o.loop()
+	ready := make(chan struct{})
+
+	go o.loop(ready)
+
+	<-ready
 }
 
-func (o *defaultWatcher) loop() {
+func (o *defaultWatcher) loop(ready chan struct{}) {
+	defer close(ready)
+
 	delay := defaultRefreshDelay
 	if o.config.RefreshDelay > 0 {
 		delay = o.config.RefreshDelay
@@ -49,6 +60,8 @@ func (o *defaultWatcher) loop() {
 
 	for {
 		select {
+		case ready <- struct{}{}:
+			// Unblock the 'Start()' caller.
 		case <-ticker.C:
 			var changes Changes
 
@@ -85,6 +98,9 @@ func (o *defaultWatcher) loop() {
 }
 
 func (o *defaultWatcher) Stop() {
+	o.mutex.Lock()
+	defer o.mutex.Unlock()
+
 	if o.stop != nil {
 		close(o.stop)
 	}
@@ -274,6 +290,7 @@ func NewWatcher(config Config) (Watcher, error) {
 	}
 
 	return &defaultWatcher{
+		mutex:  &sync.Mutex{},
 		config: config,
 	}, nil
 }
