@@ -36,72 +36,66 @@ func (o *defaultWatcher) Start() {
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
 
-	if o.kill == nil {
+	select {
+	case _, open := <-o.kill:
+		if !open {
+			return
+		}
+	case _, open := <-o.stop:
+		if !open {
+			o.stop = make(chan struct{})
+		}
+	default:
 		return
 	}
 
-	if o.stop != nil {
-		return
-	}
-
-	o.stop = make(chan struct{})
-
-	ready := make(chan struct{})
-
-	go o.loop(ready)
-
-	<-ready
+	go o.loop()
 }
 
-func (o *defaultWatcher) loop(ready chan struct{}) {
-	defer close(ready)
-
+func (o *defaultWatcher) loop() {
 	delay := defaultRefreshDelay
 	if o.config.RefreshDelay > 0 {
 		delay = o.config.RefreshDelay
 	}
 
-	ticker := time.NewTicker(delay)
-	defer ticker.Stop()
-
 	for {
-		select {
-		case ready <- struct{}{}:
-			// Unblock the 'Start()' caller.
-		case <-ticker.C:
-			var changes Changes
+		time.Sleep(delay)
 
-			current := o.config.ScanFunc(o.config)
-			if current.Err != nil {
-				changes.Err = current.Err
-				o.config.Changes <- changes
+		var changes Changes
+
+		current := o.config.ScanFunc(o.config)
+		if current.Err != nil {
+			changes.Err = current.Err
+			o.config.Changes <- changes
+			continue
+		}
+
+		for filePath, currentSha256 := range current.FilePathsToSha256s {
+			lastSha256, exists := o.last.FilePathsToSha256s[filePath]
+			if exists && currentSha256 == lastSha256 {
 				continue
 			}
 
-			for filePath, currentSha256 := range current.FilePathsToSha256s {
-				lastSha256, exists := o.last.FilePathsToSha256s[filePath]
-				if exists && currentSha256 == lastSha256 {
-					continue
-				}
+			changes.UpdatedFilePaths = append(changes.UpdatedFilePaths, filePath)
+		}
 
-				changes.UpdatedFilePaths = append(changes.UpdatedFilePaths, filePath)
+		for filePath := range o.last.FilePathsToSha256s {
+			_, ok := current.FilePathsToSha256s[filePath]
+			if !ok {
+				changes.DeletedFilePaths = append(changes.DeletedFilePaths, filePath)
 			}
+		}
 
-			for filePath := range o.last.FilePathsToSha256s {
-				_, ok := current.FilePathsToSha256s[filePath]
-				if !ok {
-					changes.DeletedFilePaths = append(changes.DeletedFilePaths, filePath)
-				}
-			}
+		o.last = current
 
-			o.last = current
-
-			o.config.Changes <- changes
-		case <-o.stop:
-			return
+		select {
 		case <-o.kill:
 			close(o.config.Changes)
 			return
+		case <-o.stop:
+			return
+		default:
+			o.config.Changes <- changes
 		}
 	}
 }
@@ -110,22 +104,30 @@ func (o *defaultWatcher) Destroy() {
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
 
-	if o.kill != nil {
-		close(o.kill)
+	select {
+	case _, open := <-o.kill:
+		if !open {
+			return
+		}
+	default:
 	}
 
-	o.kill = nil
+	close(o.kill)
 }
 
 func (o *defaultWatcher) Stop() {
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
 
-	if o.stop != nil {
-		close(o.stop)
+	select {
+	case _, open := <-o.stop:
+		if !open {
+			return
+		}
+	default:
 	}
 
-	o.stop = nil
+	close(o.stop)
 }
 
 type Scan struct {
@@ -309,9 +311,14 @@ func NewWatcher(config Config) (Watcher, error) {
 		return &defaultWatcher{}, err
 	}
 
-	return &defaultWatcher{
+	w := &defaultWatcher{
 		mutex:  &sync.Mutex{},
 		config: config,
 		kill:   make(chan struct{}),
-	}, nil
+		stop:   make(chan struct{}),
+	}
+
+	close(w.stop)
+
+	return w, nil
 }

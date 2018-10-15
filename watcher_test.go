@@ -252,6 +252,132 @@ func TestDefaultWatcher_Stop(t *testing.T) {
 	}
 }
 
+func TestDefaultWatcher_StopWithoutStart(t *testing.T) {
+	current, err := os.Getwd()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	config := Config{
+		RefreshDelay: 1 * time.Second,
+		RootDirPath:  current,
+		FileSuffix:   ".go",
+		Changes:      make(chan Changes),
+		ScanFunc:     ScanFilesInDirectory,
+	}
+	w, err := NewWatcher(config)
+	if err != nil {
+		t.Error("Valid config generated an error -", err.Error())
+	}
+
+	w.Stop()
+
+	ticker := time.NewTicker(config.RefreshDelay * 2)
+	defer ticker.Stop()
+
+	var count int
+	OUTER:
+	for {
+		select {
+		case <-ticker.C:
+			break OUTER
+		case <-config.Changes:
+			count++
+		}
+	}
+
+	if count > 0 {
+		t.Error("Results were produced after stopping -", count)
+	}
+}
+
+func TestDefaultWatcher_StartStopStartStop(t *testing.T) {
+	current, err := os.Getwd()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	config := Config{
+		RefreshDelay: 1 * time.Second,
+		RootDirPath:  current,
+		FileSuffix:   ".go",
+		Changes:      make(chan Changes),
+		ScanFunc:     ScanFilesInDirectory,
+	}
+	w, err := NewWatcher(config)
+	if err != nil {
+		t.Error("Valid config generated an error -", err.Error())
+	}
+
+	w.Start()
+	ticker := time.NewTicker(config.RefreshDelay * 2)
+	var count int
+	OUTER:
+	for {
+		select {
+		case <-ticker.C:
+			break OUTER
+		case <-config.Changes:
+			count++
+		}
+	}
+	ticker.Stop()
+	if count != 1 {
+		t.Error("Did not get expected number of results -", count)
+	}
+
+	w.Stop()
+	ticker = time.NewTicker(config.RefreshDelay * 2)
+	count = 0
+	OUTER2:
+	for {
+		select {
+		case <-ticker.C:
+			break OUTER2
+		case <-config.Changes:
+			count++
+		}
+	}
+	ticker.Stop()
+	if count > 0 {
+		t.Error("Results were produced after stopping -", count)
+	}
+
+	w.Start()
+	ticker = time.NewTicker(config.RefreshDelay * 2)
+	count = 0
+	OUTER3:
+	for {
+		select {
+		case <-ticker.C:
+			break OUTER3
+		case <-config.Changes:
+			count++
+		}
+	}
+	ticker.Stop()
+	if count != 1 {
+		t.Error("Did not get 1 result after starting -", count)
+	}
+
+	w.Stop()
+	ticker = time.NewTicker(config.RefreshDelay * 2)
+	count = 0
+	OUTER4:
+	for {
+		select {
+		case <-ticker.C:
+			break OUTER4
+		case <-config.Changes:
+			count++
+		}
+	}
+	ticker.Stop()
+	if count > 0 {
+		t.Error("Results were produced after stopping -", count)
+	}
+}
+
 func TestDefaultWatcher_StopMultipleTimes(t *testing.T) {
 	current, err := os.Getwd()
 	if err != nil {
@@ -322,7 +448,7 @@ func TestDefaultWatcher_Destroy(t *testing.T) {
 	ticker := time.NewTicker(config.RefreshDelay * 2)
 
 	var count int
-	
+
 	OUTER:
 	for {
 		select {
@@ -339,6 +465,16 @@ func TestDefaultWatcher_Destroy(t *testing.T) {
 	if count > 0 {
 		t.Error("More than one result was produced after destroying -", count)
 	}
+
+	select {
+	case _, ok := <-config.Changes:
+		if !ok {
+			return
+		}
+	default:
+	}
+
+	t.Error("Changes channel is still open after destroy")
 }
 
 func TestDefaultWatcher_DestroyMultipleTimes(t *testing.T) {
@@ -387,4 +523,14 @@ func TestDefaultWatcher_DestroyMultipleTimes(t *testing.T) {
 	if count > 0 {
 		t.Error("More than one result was produced after destroying multple times -", count)
 	}
+
+	select {
+	case _, ok := <-config.Changes:
+		if !ok {
+			return
+		}
+	default:
+	}
+
+	t.Error("Changes channel is still open after destroy")
 }
