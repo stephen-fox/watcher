@@ -22,6 +22,7 @@ type Watcher interface {
 	Start()
 	Stop()
 	Destroy()
+	Config() *Config
 }
 
 type defaultWatcher struct {
@@ -49,13 +50,13 @@ func (o *defaultWatcher) Start() {
 		return
 	}
 
-	go o.loop()
+	go o.loop(o.config)
 }
 
-func (o *defaultWatcher) loop() {
+func (o *defaultWatcher) loop(config Config) {
 	delay := defaultRefreshDelay
-	if o.config.RefreshDelay > 0 {
-		delay = o.config.RefreshDelay
+	if config.RefreshDelay > 0 {
+		delay = config.RefreshDelay
 	}
 
 	for {
@@ -63,10 +64,10 @@ func (o *defaultWatcher) loop() {
 
 		var changes Changes
 
-		current := o.config.ScanFunc(o.config)
+		current := config.ScanFunc(config)
 		if current.Err != nil {
 			changes.Err = current.Err
-			o.config.Changes <- changes
+			config.Changes <- changes
 			continue
 		}
 
@@ -90,12 +91,12 @@ func (o *defaultWatcher) loop() {
 
 		select {
 		case <-o.kill:
-			close(o.config.Changes)
+			close(config.Changes)
 			return
 		case <-o.stop:
 			return
 		default:
-			o.config.Changes <- changes
+			config.Changes <- changes
 		}
 	}
 }
@@ -128,6 +129,10 @@ func (o *defaultWatcher) Stop() {
 	}
 
 	close(o.stop)
+}
+
+func (o *defaultWatcher) Config() *Config {
+	return &o.config
 }
 
 type Scan struct {
