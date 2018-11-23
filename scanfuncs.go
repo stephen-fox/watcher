@@ -28,20 +28,21 @@ import (
 // If you specify the root directory to scan as 'My Files', and the file suffix
 // as '.cfg', the function will return a map of file paths to hashes containing
 // 'path/to/My Files/Awesome.cfg'.
-func ScanFilesInDirectory(config Config) Scan {
+func ScanFilesInDirectory(config Config) ScanResult {
 	subInfos, err := ioutil.ReadDir(config.RootDirPath)
 	if err != nil {
-		return Scan{
-			Err: err,
+		return ScanResult{
+			Err:            err,
+			RootReadFailed: true,
 		}
 	}
 
-	result := Scan{
+	result := ScanResult{
 		FilePathsToSha256s: make(map[string]string),
 	}
 
 	for _, sub := range subInfos {
-		if sub.IsDir() || !strings.HasSuffix(sub.Name(), config.FileSuffix) {
+		if sub.IsDir() || !matchesSuffixes(sub.Name(), config.FileSuffixes){
 			continue
 		}
 
@@ -80,15 +81,16 @@ func ScanFilesInDirectory(config Config) Scan {
 // If you specify the root directory to scan as 'My Files', and the file suffix
 // as '.cfg', the function will return a map of file paths to hashes containing
 // 'path/to/My Files/stuff/Awesome.cfg'.
-func ScanFilesInSubdirectories(config Config) Scan {
+func ScanFilesInSubdirectories(config Config) ScanResult {
 	subInfos, err := ioutil.ReadDir(config.RootDirPath)
 	if err != nil {
-		return Scan{
-			Err: err,
+		return ScanResult{
+			Err:            err,
+			RootReadFailed: true,
 		}
 	}
 
-	result := Scan{
+	result := ScanResult{
 		FilePathsToSha256s: make(map[string]string),
 	}
 
@@ -105,7 +107,7 @@ func ScanFilesInSubdirectories(config Config) Scan {
 		}
 
 		for _, c := range children {
-			if c.IsDir() || !strings.HasSuffix(c.Name(), config.FileSuffix) {
+			if c.IsDir() || !matchesSuffixes(c.Name(), config.FileSuffixes){
 				continue
 			}
 
@@ -122,6 +124,16 @@ func ScanFilesInSubdirectories(config Config) Scan {
 	}
 
 	return result
+}
+
+func matchesSuffixes(s string, suffixes []string) bool {
+	for i := range suffixes {
+		if strings.HasSuffix(s, suffixes[i]) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func getFileSha256(filePath string) (string, error) {

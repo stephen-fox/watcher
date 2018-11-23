@@ -21,7 +21,7 @@ type Watcher interface {
 type defaultWatcher struct {
 	mutex  *sync.Mutex
 	config Config
-	last   Scan
+	last   ScanResult
 	stop   chan struct{}
 	kill   chan struct{}
 }
@@ -55,11 +55,11 @@ func (o *defaultWatcher) loop(config Config) {
 	for {
 		time.Sleep(delay)
 
-		var changes Changes
-
 		current := config.ScanFunc(config)
+		changes := &defaultChanges{
+			scanResult: current,
+		}
 		if current.Err != nil {
-			changes.Err = current.Err
 			config.Changes <- changes
 			continue
 		}
@@ -70,13 +70,13 @@ func (o *defaultWatcher) loop(config Config) {
 				continue
 			}
 
-			changes.UpdatedFilePaths = append(changes.UpdatedFilePaths, filePath)
+			changes.updatedFilePaths = append(changes.updatedFilePaths, filePath)
 		}
 
 		for filePath := range o.last.FilePathsToSha256s {
 			_, ok := current.FilePathsToSha256s[filePath]
 			if !ok {
-				changes.DeletedFilePaths = append(changes.DeletedFilePaths, filePath)
+				changes.deletedFilePaths = append(changes.deletedFilePaths, filePath)
 			}
 		}
 
@@ -128,17 +128,18 @@ func (o *defaultWatcher) Config() *Config {
 	return &o.config
 }
 
-type Scan struct {
+type ScanResult struct {
 	Err                error
+	RootReadFailed     bool
 	FilePathsToSha256s map[string]string
 }
 
 type Config struct {
-	ScanFunc     func(config Config) Scan
+	ScanFunc     func(config Config) ScanResult
 	RefreshDelay time.Duration
 	RootDirPath  string
-	FileSuffix   string
-	Changes      chan Changes
+	FileSuffixes []string
+	Changes      chan Change
 }
 
 func (o Config) IsValid() error {
@@ -146,8 +147,8 @@ func (o Config) IsValid() error {
 		return errors.New("The directory path to watch cannot not be empty")
 	}
 
-	if len(strings.TrimSpace(o.FileSuffix)) == 0 {
-		return errors.New("The file suffix to match cannot not be empty")
+	if len(o.FileSuffixes) == 0 {
+		return errors.New("The file suffixes to match cannot not be empty")
 	}
 
 	if o.Changes == nil {
@@ -161,14 +162,42 @@ func (o Config) IsValid() error {
 	return nil
 }
 
-type Changes struct {
-	Err              error
-	UpdatedFilePaths []string
-	DeletedFilePaths []string
+type Change interface {
+	IsErr() bool
+	RootReadErr() bool
+	ErrDetails() string
+	UpdatedFilePaths() []string
+	DeletedFilePaths() []string
 }
 
-func (o Changes) IsErr() bool {
-	return o.Err != nil
+type defaultChanges struct {
+	scanResult       ScanResult
+	updatedFilePaths []string
+	deletedFilePaths []string
+}
+
+func (o *defaultChanges) IsErr() bool {
+	return o.scanResult.Err != nil
+}
+
+func (o *defaultChanges) RootReadErr() bool {
+	return o.scanResult.RootReadFailed
+}
+
+func (o *defaultChanges) ErrDetails() string {
+	if o.scanResult.Err != nil {
+		return o.scanResult.Err.Error()
+	}
+
+	return ""
+}
+
+func (o *defaultChanges) UpdatedFilePaths() []string {
+	return o.updatedFilePaths
+}
+
+func (o *defaultChanges) DeletedFilePaths() []string {
+	return o.deletedFilePaths
 }
 
 func NewWatcher(config Config) (Watcher, error) {

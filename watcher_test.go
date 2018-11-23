@@ -14,53 +14,53 @@ const (
 func TestConfig_IsValid(t *testing.T) {
 	emptyErr := Config{}.IsValid()
 	if emptyErr == nil {
-		t.Error("Empty config did not generate an error")
+		t.Fatal("Empty config did not generate an error")
 	}
 
 	noFileExtensionErr := Config{
 		RootDirPath: "/bla",
-		Changes:     make(chan Changes),
+		Changes:     make(chan Change),
 		ScanFunc:    ScanFilesInDirectory,
 	}.IsValid()
 	if noFileExtensionErr == nil {
-		t.Error("Empty file extension did not generate an error")
+		t.Fatal("Empty file extension did not generate an error")
 	}
 
 	noDirErr := Config{
-		FileSuffix: ".bla",
-		Changes:    make(chan Changes),
-		ScanFunc:   ScanFilesInDirectory,
+		FileSuffixes: []string{".bla"},
+		Changes:      make(chan Change),
+		ScanFunc:     ScanFilesInDirectory,
 	}.IsValid()
 	if noDirErr == nil {
-		t.Error("Empty directory path did not generate an error")
+		t.Fatal("Empty directory path did not generate an error")
 	}
 
 	noChannelErr := Config{
-		RootDirPath: "fsfds",
-		FileSuffix:  ".akdka",
-		ScanFunc:    ScanFilesInDirectory,
+		RootDirPath:   "fsfds",
+		FileSuffixes:  []string{".akdka"},
+		ScanFunc:      ScanFilesInDirectory,
 	}.IsValid()
 	if noChannelErr == nil {
-		t.Error("Empty Changes channel did not generate an error")
+		t.Fatal("Empty Changes channel did not generate an error")
 	}
 
 	noScanFuncErr := Config{
-		RootDirPath: "fsfds",
-		FileSuffix:  ".akdka",
-		Changes:     make(chan Changes),
+		RootDirPath:   "fsfds",
+		FileSuffixes:  []string{".akdka"},
+		Changes:       make(chan Change),
 	}.IsValid()
 	if noScanFuncErr == nil {
-		t.Error("Empty scan func did not generate an error")
+		t.Fatal("Empty scan func did not generate an error")
 	}
 
 	err := Config{
-		RootDirPath: "fdf",
-		FileSuffix:  ".bla",
-		Changes:     make(chan Changes),
-		ScanFunc:    ScanFilesInDirectory,
+		RootDirPath:   "fdf",
+		FileSuffixes:  []string{".bla"},
+		Changes:       make(chan Change),
+		ScanFunc:      ScanFilesInDirectory,
 	}.IsValid()
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 }
 
@@ -68,58 +68,58 @@ func TestNewWatcher(t *testing.T) {
 	config := Config{}
 	_, err := NewWatcher(config)
 	if err == nil {
-		t.Error("Empty config did not generate an error")
+		t.Fatal("Empty config did not generate an error")
 	}
 
 	noFileExtensionErr := Config{
 		RootDirPath: "/bla",
-		Changes:     make(chan Changes),
+		Changes:     make(chan Change),
 		ScanFunc:    ScanFilesInDirectory,
 	}.IsValid()
 	if noFileExtensionErr == nil {
-		t.Error("Empty file extension did not generate an error")
+		t.Fatal("Empty file extension did not generate an error")
 	}
 
 	config = Config{
-		FileSuffix: ".bla",
-		Changes:    make(chan Changes),
-		ScanFunc:   ScanFilesInDirectory,
+		FileSuffixes: []string{".bla"},
+		Changes:      make(chan Change),
+		ScanFunc:     ScanFilesInDirectory,
 
 	}
 	_, err = NewWatcher(config)
 	if err == nil {
-		t.Error("Empty directory path did not generate an error")
+		t.Fatal("Empty directory path did not generate an error")
 	}
 
 	config = Config{
-		RootDirPath: "fsfds",
-		FileSuffix:  ".akdka",
-		ScanFunc:    ScanFilesInDirectory,
+		RootDirPath:   "fsfds",
+		FileSuffixes:  []string{".akdka"},
+		ScanFunc:      ScanFilesInDirectory,
 
 	}
 	_, err = NewWatcher(config)
 	if err == nil {
-		t.Error("Empty Changes channel did not generate an error")
+		t.Fatal("Empty Changes channel did not generate an error")
 	}
 
 	config = Config{
-		RootDirPath: "fsfds",
-		FileSuffix:  ".akdka",
+		RootDirPath:   "fsfds",
+		FileSuffixes:  []string{".akdka"},
 	}
 	_, err = NewWatcher(config)
 	if err == nil {
-		t.Error("Empty scan func did not generate an error")
+		t.Fatal("Empty scan func did not generate an error")
 	}
 
 	config = Config{
-		RootDirPath: "fdf",
-		FileSuffix:  ".bla",
-		Changes:     make(chan Changes),
-		ScanFunc:    ScanFilesInDirectory,
+		RootDirPath:   "fdf",
+		FileSuffixes:  []string{".bla"},
+		Changes:       make(chan Change),
+		ScanFunc:      ScanFilesInDirectory,
 	}
 	_, err = NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 }
 
@@ -127,13 +127,13 @@ func TestDefaultWatcherScanFilesInDirectory_Start(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer w.Stop()
 
@@ -141,7 +141,7 @@ func TestDefaultWatcherScanFilesInDirectory_Start(t *testing.T) {
 
 	changes := <-config.Changes
 	if changes.IsErr() {
-		t.Error(changes.Err)
+		t.Fatal(changes.ErrDetails())
 	}
 
 	exp := []string{
@@ -149,19 +149,19 @@ func TestDefaultWatcherScanFilesInDirectory_Start(t *testing.T) {
 		"file2.txt",
 	}
 
-	if len(changes.UpdatedFilePaths) == 0 {
-		t.Error("Updated file paths should not be empty")
+	if len(changes.UpdatedFilePaths()) == 0 {
+		t.Fatal("Updated file paths should not be empty")
 	}
 
 	OUTER:
-	for _, filePath := range changes.UpdatedFilePaths {
+	for _, filePath := range changes.UpdatedFilePaths() {
 		for _, e := range exp {
 			if path.Base(filePath) == e {
 				continue OUTER
 			}
 		}
 
-		t.Error("Got unexpected file path -", filePath)
+		t.Fatal("Got unexpected file path -", filePath)
 	}
 }
 
@@ -169,13 +169,13 @@ func TestDefaultWatcherScanFilesInDirectory_StartMultipleTimes(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 	defer w.Stop()
 
@@ -200,7 +200,7 @@ func TestDefaultWatcherScanFilesInDirectory_StartMultipleTimes(t *testing.T) {
 	}
 
 	if count != 1 {
-		t.Error("Did not receive expected changes -", count)
+		t.Fatal("Did not receive expected changes -", count)
 	}
 }
 
@@ -208,13 +208,13 @@ func TestDefaultWatcherScanFilesInDirectory_Stop(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -236,7 +236,7 @@ func TestDefaultWatcherScanFilesInDirectory_Stop(t *testing.T) {
 	}
 
 	if count > 0 {
-		t.Error("Results were produced after stopping -", count)
+		t.Fatal("Results were produced after stopping -", count)
 	}
 }
 
@@ -244,13 +244,13 @@ func TestDefaultWatcherScanFilesInDirectory_StopWithoutStart(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Stop()
@@ -270,7 +270,7 @@ func TestDefaultWatcherScanFilesInDirectory_StopWithoutStart(t *testing.T) {
 	}
 
 	if count > 0 {
-		t.Error("Results were produced after stopping -", count)
+		t.Fatal("Results were produced after stopping -", count)
 	}
 }
 
@@ -278,13 +278,13 @@ func TestDefaultWatcherScanFilesInDirectory_StartStopStartStop(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -301,7 +301,7 @@ func TestDefaultWatcherScanFilesInDirectory_StartStopStartStop(t *testing.T) {
 	}
 	ticker.Stop()
 	if count != 1 {
-		t.Error("Did not get expected number of results -", count)
+		t.Fatal("Did not get expected number of results -", count)
 	}
 
 	w.Stop()
@@ -318,7 +318,7 @@ func TestDefaultWatcherScanFilesInDirectory_StartStopStartStop(t *testing.T) {
 	}
 	ticker.Stop()
 	if count > 0 {
-		t.Error("Results were produced after stopping -", count)
+		t.Fatal("Results were produced after stopping -", count)
 	}
 
 	w.Start()
@@ -335,7 +335,7 @@ func TestDefaultWatcherScanFilesInDirectory_StartStopStartStop(t *testing.T) {
 	}
 	ticker.Stop()
 	if count != 1 {
-		t.Error("Did not get 1 result after starting -", count)
+		t.Fatal("Did not get 1 result after starting -", count)
 	}
 
 	w.Stop()
@@ -352,7 +352,7 @@ func TestDefaultWatcherScanFilesInDirectory_StartStopStartStop(t *testing.T) {
 	}
 	ticker.Stop()
 	if count > 0 {
-		t.Error("Results were produced after stopping -", count)
+		t.Fatal("Results were produced after stopping -", count)
 	}
 }
 
@@ -360,13 +360,13 @@ func TestDefaultWatcherScanFilesInDirectory_StopMultipleTimes(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -392,7 +392,7 @@ func TestDefaultWatcherScanFilesInDirectory_StopMultipleTimes(t *testing.T) {
 	}
 
 	if count > 0 {
-		t.Error("More than one result was produced after stopping multiple times -", count)
+		t.Fatal("More than one result was produced after stopping multiple times -", count)
 	}
 }
 
@@ -400,13 +400,13 @@ func TestDefaultWatcherScanFilesInDirectory_Destroy(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -431,7 +431,7 @@ func TestDefaultWatcherScanFilesInDirectory_Destroy(t *testing.T) {
 	}
 
 	if count > 0 {
-		t.Error("More than one result was produced after destroying -", count)
+		t.Fatal("More than one result was produced after destroying -", count)
 	}
 
 	select {
@@ -442,20 +442,20 @@ func TestDefaultWatcherScanFilesInDirectory_Destroy(t *testing.T) {
 	default:
 	}
 
-	t.Error("Changes channel is still open after destroy")
+	t.Fatal("Changes channel is still open after destroy")
 }
 
 func TestDefaultWatcherScanFilesInDirectory_DestroyMultipleTimes(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -484,7 +484,7 @@ func TestDefaultWatcherScanFilesInDirectory_DestroyMultipleTimes(t *testing.T) {
 	}
 
 	if count > 0 {
-		t.Error("More than one result was produced after destroying multple times -", count)
+		t.Fatal("More than one result was produced after destroying multple times -", count)
 	}
 
 	select {
@@ -495,20 +495,20 @@ func TestDefaultWatcherScanFilesInDirectory_DestroyMultipleTimes(t *testing.T) {
 	default:
 	}
 
-	t.Error("Changes channel is still open after destroy")
+	t.Fatal("Changes channel is still open after destroy")
 }
 
 func TestDefaultWatcherScanFilesInSubdirectories_Start(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer w.Stop()
 
@@ -516,7 +516,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_Start(t *testing.T) {
 
 	changes := <-config.Changes
 	if changes.IsErr() {
-		t.Error(changes.Err)
+		t.Fatal(changes.ErrDetails())
 	}
 
 	exp := []string{
@@ -524,19 +524,19 @@ func TestDefaultWatcherScanFilesInSubdirectories_Start(t *testing.T) {
 		"subdirfile2.txt",
 	}
 
-	if len(changes.UpdatedFilePaths) == 0 {
-		t.Error("Updated file paths should not be empty")
+	if len(changes.UpdatedFilePaths()) == 0 {
+		t.Fatal("Updated file paths should not be empty")
 	}
 
 	OUTER:
-	for _, filePath := range changes.UpdatedFilePaths {
+	for _, filePath := range changes.UpdatedFilePaths() {
 		for _, e := range exp {
 			if path.Base(filePath) == e {
 				continue OUTER
 			}
 		}
 
-		t.Error("Got unexpected file path -", filePath)
+		t.Fatal("Got unexpected file path -", filePath)
 	}
 }
 
@@ -544,13 +544,13 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartMultipleTimes(t *testing.T
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 	defer w.Stop()
 
@@ -575,7 +575,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartMultipleTimes(t *testing.T
 	}
 
 	if count != 1 {
-		t.Error("Did not receive expected changes -", count)
+		t.Fatal("Did not receive expected changes -", count)
 	}
 }
 
@@ -583,13 +583,13 @@ func TestDefaultWatcherScanFilesInSubdirectories_Stop(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -611,7 +611,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_Stop(t *testing.T) {
 	}
 
 	if count > 0 {
-		t.Error("Results were produced after stopping -", count)
+		t.Fatal("Results were produced after stopping -", count)
 	}
 }
 
@@ -619,13 +619,13 @@ func TestDefaultWatcherScanFilesInSubdirectories_StopWithoutStart(t *testing.T) 
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Stop()
@@ -645,7 +645,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StopWithoutStart(t *testing.T) 
 	}
 
 	if count > 0 {
-		t.Error("Results were produced after stopping -", count)
+		t.Fatal("Results were produced after stopping -", count)
 	}
 }
 
@@ -653,13 +653,13 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartStopStartStop(t *testing.T
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -676,7 +676,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartStopStartStop(t *testing.T
 	}
 	ticker.Stop()
 	if count != 1 {
-		t.Error("Did not get expected number of results -", count)
+		t.Fatal("Did not get expected number of results -", count)
 	}
 
 	w.Stop()
@@ -693,7 +693,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartStopStartStop(t *testing.T
 	}
 	ticker.Stop()
 	if count > 0 {
-		t.Error("Results were produced after stopping -", count)
+		t.Fatal("Results were produced after stopping -", count)
 	}
 
 	w.Start()
@@ -710,7 +710,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartStopStartStop(t *testing.T
 	}
 	ticker.Stop()
 	if count != 1 {
-		t.Error("Did not get 1 result after starting -", count)
+		t.Fatal("Did not get 1 result after starting -", count)
 	}
 
 	w.Stop()
@@ -727,7 +727,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartStopStartStop(t *testing.T
 	}
 	ticker.Stop()
 	if count > 0 {
-		t.Error("Results were produced after stopping -", count)
+		t.Fatal("Results were produced after stopping -", count)
 	}
 }
 
@@ -737,13 +737,13 @@ func TestDefaultWatcherScanFilesInSubdirectories_StopMultipleTimes(t *testing.T)
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  current,
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -769,7 +769,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StopMultipleTimes(t *testing.T)
 	}
 
 	if count > 0 {
-		t.Error("More than one result was produced after stopping multiple times -", count)
+		t.Fatal("More than one result was produced after stopping multiple times -", count)
 	}
 }
 
@@ -779,13 +779,13 @@ func TestDefaultWatcherScanFilesInSubdirectories_Destroy(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  current,
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -810,7 +810,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_Destroy(t *testing.T) {
 	}
 
 	if count > 0 {
-		t.Error("More than one result was produced after destroying -", count)
+		t.Fatal("More than one result was produced after destroying -", count)
 	}
 
 	select {
@@ -821,7 +821,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_Destroy(t *testing.T) {
 	default:
 	}
 
-	t.Error("Changes channel is still open after destroy")
+	t.Fatal("Changes channel is still open after destroy")
 }
 
 func TestDefaultWatcherScanFilesInSubdirectories_DestroyMultipleTimes(t *testing.T) {
@@ -830,13 +830,13 @@ func TestDefaultWatcherScanFilesInSubdirectories_DestroyMultipleTimes(t *testing
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  current,
-		FileSuffix:   searchFileExt,
-		Changes:      make(chan Changes),
+		FileSuffixes: []string{searchFileExt},
+		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
 	w, err := NewWatcher(config)
 	if err != nil {
-		t.Error("Valid config generated an error -", err.Error())
+		t.Fatal("Valid config generated an error -", err.Error())
 	}
 
 	w.Start()
@@ -865,7 +865,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_DestroyMultipleTimes(t *testing
 	}
 
 	if count > 0 {
-		t.Error("More than one result was produced after destroying multple times -", count)
+		t.Fatal("More than one result was produced after destroying multple times -", count)
 	}
 
 	select {
@@ -876,7 +876,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_DestroyMultipleTimes(t *testing
 	default:
 	}
 
-	t.Error("Changes channel is still open after destroy")
+	t.Fatal("Changes channel is still open after destroy")
 }
 
 func testDataDirPath() string {
