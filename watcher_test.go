@@ -334,8 +334,8 @@ func TestDefaultWatcherScanFilesInDirectory_StartStopStartStop(t *testing.T) {
 		}
 	}
 	ticker.Stop()
-	if count != 1 {
-		t.Fatal("Did not get 1 result after starting -", count)
+	if count > 0 {
+		t.Fatal("Got results from same directory after starting again -", count)
 	}
 
 	w.Stop()
@@ -709,8 +709,8 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartStopStartStop(t *testing.T
 		}
 	}
 	ticker.Stop()
-	if count != 1 {
-		t.Fatal("Did not get 1 result after starting -", count)
+	if count > 0 {
+		t.Fatal("Got result from same directory after starting again -", count)
 	}
 
 	w.Stop()

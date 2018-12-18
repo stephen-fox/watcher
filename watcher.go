@@ -11,6 +11,13 @@ const (
 	defaultRefreshDelay = 10 * time.Second
 )
 
+const (
+	updated changeState = "updated"
+	deleted changeState = "deleted"
+)
+
+type changeState string
+
 type Watcher interface {
 	Start()
 	Stop()
@@ -56,27 +63,28 @@ func (o *defaultWatcher) loop(config Config) {
 		time.Sleep(delay)
 
 		current := config.ScanFunc(config)
-		changes := &defaultChanges{
-			scanResult: current,
+		change := &defaultChange{
+			scanResult:  current,
+			stateToInfo: make(map[changeState][]MatchInfo),
 		}
 		if current.Err != nil {
-			config.Changes <- changes
+			config.Changes <- change
 			continue
 		}
 
-		for filePath, currentSha256 := range current.FilePathsToSha256s {
-			lastSha256, exists := o.last.FilePathsToSha256s[filePath]
-			if exists && currentSha256 == lastSha256 {
+		for currentFilePath, current := range current.FilePathsToInfo {
+			last, exists := o.last.FilePathsToInfo[currentFilePath]
+			if exists && current.Hash == last.Hash {
 				continue
 			}
 
-			changes.updatedFilePaths = append(changes.updatedFilePaths, filePath)
+			change.stateToInfo[updated] = append(change.stateToInfo[updated], current)
 		}
 
-		for filePath := range o.last.FilePathsToSha256s {
-			_, ok := current.FilePathsToSha256s[filePath]
+		for lastFilePath, info := range o.last.FilePathsToInfo {
+			_, ok := current.FilePathsToInfo[lastFilePath]
 			if !ok {
-				changes.deletedFilePaths = append(changes.deletedFilePaths, filePath)
+				change.stateToInfo[deleted] = append(change.stateToInfo[deleted], info)
 			}
 		}
 
@@ -89,7 +97,9 @@ func (o *defaultWatcher) loop(config Config) {
 		case <-o.stop:
 			return
 		default:
-			config.Changes <- changes
+			if len(change.stateToInfo) > 0 {
+				config.Changes <- change
+			}
 		}
 	}
 }
@@ -128,12 +138,6 @@ func (o *defaultWatcher) Config() *Config {
 	return &o.config
 }
 
-type ScanResult struct {
-	Err                error
-	RootReadFailed     bool
-	FilePathsToSha256s map[string]string
-}
-
 type Config struct {
 	ScanFunc     func(config Config) ScanResult
 	RefreshDelay time.Duration
@@ -168,23 +172,26 @@ type Change interface {
 	ErrDetails() string
 	UpdatedFilePaths() []string
 	DeletedFilePaths() []string
+	UpdatedFilePathsWithSuffixes(suffixes []string) []string
+	DeletedFilePathsWithSuffixes(suffixes []string) []string
+	UpdatedFilePathsWithoutSuffixes(suffixes []string) []string
+	DeletedFilePathsWithoutSuffixes(suffixes []string) []string
 }
 
-type defaultChanges struct {
-	scanResult       ScanResult
-	updatedFilePaths []string
-	deletedFilePaths []string
+type defaultChange struct {
+	scanResult  ScanResult
+	stateToInfo map[changeState][]MatchInfo
 }
 
-func (o *defaultChanges) IsErr() bool {
+func (o *defaultChange) IsErr() bool {
 	return o.scanResult.Err != nil
 }
 
-func (o *defaultChanges) RootReadErr() bool {
+func (o *defaultChange) RootReadErr() bool {
 	return o.scanResult.RootReadFailed
 }
 
-func (o *defaultChanges) ErrDetails() string {
+func (o *defaultChange) ErrDetails() string {
 	if o.scanResult.Err != nil {
 		return o.scanResult.Err.Error()
 	}
@@ -192,12 +199,86 @@ func (o *defaultChanges) ErrDetails() string {
 	return ""
 }
 
-func (o *defaultChanges) UpdatedFilePaths() []string {
-	return o.updatedFilePaths
+func (o *defaultChange) UpdatedFilePaths() []string {
+	var r []string
+
+	for _, c := range o.stateToInfo[updated] {
+		r = append(r, c.Path)
+	}
+
+	return r
 }
 
-func (o *defaultChanges) DeletedFilePaths() []string {
-	return o.deletedFilePaths
+func (o *defaultChange) DeletedFilePaths() []string {
+	var r []string
+
+	for _, c := range o.stateToInfo[deleted] {
+		r = append(r, c.Path)
+	}
+
+	return r
+}
+
+func (o *defaultChange) UpdatedFilePathsWithSuffixes(suffixes []string) []string {
+	var r []string
+
+	for _, c := range o.stateToInfo[updated] {
+		for i := range suffixes {
+			if c.MatchedOn == suffixes[i] {
+				r = append(r, c.Path)
+				break
+			}
+		}
+	}
+
+	return r
+}
+
+func (o *defaultChange) DeletedFilePathsWithSuffixes(suffixes []string) []string {
+	var r []string
+
+	for _, c := range o.stateToInfo[deleted] {
+		for i := range suffixes {
+			if c.MatchedOn == suffixes[i] {
+				r = append(r, c.Path)
+				break
+			}
+		}
+	}
+
+	return r
+}
+
+func (o *defaultChange) UpdatedFilePathsWithoutSuffixes(suffixes []string) []string {
+	var r []string
+
+OUTER:
+	for _, c := range o.stateToInfo[updated] {
+		for i := range suffixes {
+			if c.MatchedOn == suffixes[i] {
+				continue OUTER
+			}
+		}
+		r = append(r, c.Path)
+	}
+
+	return r
+}
+
+func (o *defaultChange) DeletedFilePathsWithoutSuffixes(suffixes []string) []string {
+	var r []string
+
+OUTER:
+	for _, c := range o.stateToInfo[deleted] {
+		for i := range suffixes {
+			if c.MatchedOn == suffixes[i] {
+				continue OUTER
+			}
+		}
+		r = append(r, c.Path)
+	}
+
+	return r
 }
 
 func NewWatcher(config Config) (Watcher, error) {
