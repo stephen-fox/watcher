@@ -11,12 +11,16 @@ import (
 	"strings"
 )
 
+// ScanResult provides information about the result of a scan for
+// modified files.
 type ScanResult struct {
 	Err             error
 	RootReadFailed  bool
 	FilePathsToInfo map[string]MatchInfo
 }
 
+// MatchInfo provides information about a single modified file that met the
+// match criteria.
 type MatchInfo struct {
 	Path      string
 	Hash      string

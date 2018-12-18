@@ -18,10 +18,19 @@ const (
 
 type changeState string
 
+// Watcher provides an interface for controlling a file watcher.
 type Watcher interface {
+	// Start starts the Watcher.
 	Start()
+
+	// Stop stops the Watcher.
 	Stop()
+
+	// Destroy stops the Watcher and closes the Config.Changes channel.
+	// This should only be called if you do not intend to use the Watcher.
 	Destroy()
+
+	// Config returns the Watcher's Config.
 	Config() *Config
 }
 
@@ -138,12 +147,22 @@ func (o *defaultWatcher) Config() *Config {
 	return &o.config
 }
 
+// Config configures a Watcher.
 type Config struct {
-	ScanFunc     func(config Config) ScanResult
+	// ScanFunc is the function to execute when its time to scan for a change.
+	ScanFunc func(config Config) ScanResult
+
+	// RefreshDelay is the time to wait between scans.
 	RefreshDelay time.Duration
-	RootDirPath  string
+
+	// RootDirPath is the root directory to scan.
+	RootDirPath string
+
+	// FileSuffixes is a slice of file suffixes to scan for.
 	FileSuffixes []string
-	Changes      chan Change
+
+	// Changes is the channel to receive a Change when a change occurs.
+	Changes chan Change
 }
 
 func (o Config) IsValid() error {
@@ -166,6 +185,8 @@ func (o Config) IsValid() error {
 	return nil
 }
 
+// Change provides an interface for retrieving information about
+// changes that occurred.
 type Change interface {
 	IsErr() bool
 	RootReadErr() bool
@@ -281,6 +302,7 @@ OUTER:
 	return r
 }
 
+// NewWatcher creates a new Watcher for the provided Config.
 func NewWatcher(config Config) (Watcher, error) {
 	err := config.IsValid()
 	if err != nil {
