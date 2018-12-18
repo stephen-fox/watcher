@@ -148,19 +148,19 @@ type Config struct {
 
 func (o Config) IsValid() error {
 	if len(strings.TrimSpace(o.RootDirPath)) == 0 {
-		return errors.New("The directory path to watch cannot not be empty")
+		return errors.New("the directory path to watch cannot not be empty")
 	}
 
 	if len(o.FileSuffixes) == 0 {
-		return errors.New("The file suffixes to match cannot not be empty")
+		return errors.New("the file suffixes to match cannot not be empty")
 	}
 
 	if o.Changes == nil {
-		return errors.New("The changes channel cannot be nil")
+		return errors.New("the changes channel cannot be nil")
 	}
 
 	if o.ScanFunc == nil {
-		return errors.New("The scan function cannot be nil")
+		return errors.New("the scan function cannot be nil")
 	}
 
 	return nil
