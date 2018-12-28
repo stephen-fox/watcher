@@ -9,13 +9,12 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 )
 
 // ScanResult provides information about the result of a scan for
 // modified files.
 type ScanResult struct {
-	Err             error
-	RootReadFailed  bool
 	FilePathsToInfo map[string]MatchInfo
 }
 
@@ -23,7 +22,7 @@ type ScanResult struct {
 // match criteria.
 type MatchInfo struct {
 	Path      string
-	Hash      string
+	ModTime   time.Time
 	MatchedOn string
 }
 
@@ -44,12 +43,12 @@ type MatchInfo struct {
 // If you specify the root directory to scan as 'My Files', and the file suffix
 // as '.cfg', the function will return a ScanResult containing
 // 'path/to/My Files/Awesome.cfg'.
-func ScanFilesInDirectory(config Config) ScanResult {
+func ScanFilesInDirectory(config Config) (ScanResult, error) {
 	subInfos, err := ioutil.ReadDir(config.RootDirPath)
 	if err != nil {
-		return ScanResult{
-			Err:            err,
-			RootReadFailed: true,
+		return ScanResult{}, &ScanError{
+			reason:         err.Error(),
+			rootReadFailed: true,
 		}
 	}
 
@@ -69,20 +68,14 @@ func ScanFilesInDirectory(config Config) ScanResult {
 
 		filePath := path.Join(config.RootDirPath, sub.Name())
 
-		h, err := getFileSha256(filePath)
-		if err != nil {
-			// TODO: Do something about the error.
-			continue
-		}
-
 		result.FilePathsToInfo[filePath] = MatchInfo{
 			Path:      filePath,
 			MatchedOn: suffix,
-			Hash:      h,
+			ModTime:   sub.ModTime(),
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 // ScanFilesInSubdirectories scans a directory's subdirectories for files
@@ -106,12 +99,12 @@ func ScanFilesInDirectory(config Config) ScanResult {
 // If you specify the root directory to scan as 'My Files', and the file suffix
 // as '.cfg', the function will return a ScanResult containing
 // 'path/to/My Files/stuff/Awesome.cfg'.
-func ScanFilesInSubdirectories(config Config) ScanResult {
+func ScanFilesInSubdirectories(config Config) (ScanResult, error) {
 	subInfos, err := ioutil.ReadDir(config.RootDirPath)
 	if err != nil {
-		return ScanResult{
-			Err:            err,
-			RootReadFailed: true,
+		return ScanResult{}, &ScanError{
+			reason:         err.Error(),
+			rootReadFailed: true,
 		}
 	}
 
@@ -143,21 +136,15 @@ func ScanFilesInSubdirectories(config Config) ScanResult {
 
 			cPath := path.Join(subDirPath, c.Name())
 
-			h, err := getFileSha256(cPath)
-			if err != nil {
-				// TODO: Do something about the error.
-				continue
-			}
-
 			result.FilePathsToInfo[cPath] = MatchInfo{
 				Path:      cPath,
 				MatchedOn: suffix,
-				Hash:      h,
+				ModTime:   c.ModTime(),
 			}
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 func matchesSuffixes(s string, suffixes []string) (string, bool) {
