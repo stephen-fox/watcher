@@ -1,12 +1,7 @@
 package watcher
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"hash"
-	"io"
 	"io/ioutil"
-	"os"
 	"path"
 	"strings"
 	"time"
@@ -155,23 +150,4 @@ func matchesSuffixes(s string, suffixes []string) (string, bool) {
 	}
 
 	return "", false
-}
-
-func getFileSha256(filePath string) (string, error) {
-	return getFileHash(filePath, sha256.New())
-}
-
-func getFileHash(filePath string, hash hash.Hash) (string, error) {
-	target, err := os.OpenFile(filePath, os.O_RDONLY, os.ModeAppend)
-	if err != nil {
-		return "", err
-	}
-	defer target.Close()
-
-	_, err = io.Copy(hash, target)
-	if err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(hash.Sum(nil)), nil
 }
