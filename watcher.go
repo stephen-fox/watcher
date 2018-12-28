@@ -71,19 +71,20 @@ func (o *defaultWatcher) loop(config Config) {
 	for {
 		time.Sleep(delay)
 
-		current := config.ScanFunc(config)
+		current, err := config.ScanFunc(config)
 		change := &defaultChange{
 			scanResult:  current,
 			stateToInfo: make(map[changeState][]MatchInfo),
 		}
-		if current.Err != nil {
+		if err != nil {
+			change.err = err
 			config.Changes <- change
 			continue
 		}
 
 		for currentFilePath, current := range current.FilePathsToInfo {
 			last, exists := o.last.FilePathsToInfo[currentFilePath]
-			if exists && current.Hash == last.Hash {
+			if exists && current.ModTime == last.ModTime {
 				continue
 			}
 
@@ -149,8 +150,9 @@ func (o *defaultWatcher) Config() *Config {
 
 // Config configures a Watcher.
 type Config struct {
-	// ScanFunc is the function to execute when its time to scan for a change.
-	ScanFunc func(config Config) ScanResult
+	// ScanFunc is the function to execute when it is time to
+	// scan for a change.
+	ScanFunc func(config Config) (ScanResult, error)
 
 	// RefreshDelay is the time to wait between scans.
 	RefreshDelay time.Duration
@@ -200,21 +202,31 @@ type Change interface {
 }
 
 type defaultChange struct {
+	err         error
 	scanResult  ScanResult
 	stateToInfo map[changeState][]MatchInfo
 }
 
 func (o *defaultChange) IsErr() bool {
-	return o.scanResult.Err != nil
+	return o.err != nil
 }
 
 func (o *defaultChange) RootReadErr() bool {
-	return o.scanResult.RootReadFailed
+	if o.err != nil {
+		sErr, is := o.err.(ScanError)
+		if is {
+			if sErr.RootDirectoryReadFailed() {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (o *defaultChange) ErrDetails() string {
-	if o.scanResult.Err != nil {
-		return o.scanResult.Err.Error()
+	if o.err != nil {
+		return o.err.Error()
 	}
 
 	return ""
