@@ -160,8 +160,9 @@ type Config struct {
 	// RootDirPath is the root directory to scan.
 	RootDirPath string
 
-	// FileSuffixes is a slice of file suffixes to scan for.
-	FileSuffixes []string
+	// ScanCriteria is a slice of strings that ScanFunc uses
+	// to match files.
+	ScanCriteria []string
 
 	// Changes is the channel to receive a Change when a change occurs.
 	Changes chan Change
@@ -172,7 +173,7 @@ func (o Config) IsValid() error {
 		return errors.New("the directory path to watch cannot not be empty")
 	}
 
-	if len(o.FileSuffixes) == 0 {
+	if len(o.ScanCriteria) == 0 {
 		return errors.New("the file suffixes to match cannot not be empty")
 	}
 

@@ -27,7 +27,7 @@ func TestConfig_IsValid(t *testing.T) {
 	}
 
 	noDirErr := Config{
-		FileSuffixes: []string{".bla"},
+		ScanCriteria: []string{".bla"},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}.IsValid()
@@ -36,28 +36,28 @@ func TestConfig_IsValid(t *testing.T) {
 	}
 
 	noChannelErr := Config{
-		RootDirPath:   "fsfds",
-		FileSuffixes:  []string{".akdka"},
-		ScanFunc:      ScanFilesInDirectory,
+		RootDirPath:  "fsfds",
+		ScanCriteria: []string{".akdka"},
+		ScanFunc:     ScanFilesInDirectory,
 	}.IsValid()
 	if noChannelErr == nil {
 		t.Fatal("Empty Changes channel did not generate an error")
 	}
 
 	noScanFuncErr := Config{
-		RootDirPath:   "fsfds",
-		FileSuffixes:  []string{".akdka"},
-		Changes:       make(chan Change),
+		RootDirPath:  "fsfds",
+		ScanCriteria: []string{".akdka"},
+		Changes:      make(chan Change),
 	}.IsValid()
 	if noScanFuncErr == nil {
 		t.Fatal("Empty scan func did not generate an error")
 	}
 
 	err := Config{
-		RootDirPath:   "fdf",
-		FileSuffixes:  []string{".bla"},
-		Changes:       make(chan Change),
-		ScanFunc:      ScanFilesInDirectory,
+		RootDirPath:  "fdf",
+		ScanCriteria: []string{".bla"},
+		Changes:      make(chan Change),
+		ScanFunc:     ScanFilesInDirectory,
 	}.IsValid()
 	if err != nil {
 		t.Fatal("Valid config generated an error -", err.Error())
@@ -81,7 +81,7 @@ func TestNewWatcher(t *testing.T) {
 	}
 
 	config = Config{
-		FileSuffixes: []string{".bla"},
+		ScanCriteria: []string{".bla"},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 
@@ -92,9 +92,9 @@ func TestNewWatcher(t *testing.T) {
 	}
 
 	config = Config{
-		RootDirPath:   "fsfds",
-		FileSuffixes:  []string{".akdka"},
-		ScanFunc:      ScanFilesInDirectory,
+		RootDirPath:  "fsfds",
+		ScanCriteria: []string{".akdka"},
+		ScanFunc:     ScanFilesInDirectory,
 
 	}
 	_, err = NewWatcher(config)
@@ -103,8 +103,8 @@ func TestNewWatcher(t *testing.T) {
 	}
 
 	config = Config{
-		RootDirPath:   "fsfds",
-		FileSuffixes:  []string{".akdka"},
+		RootDirPath:  "fsfds",
+		ScanCriteria: []string{".akdka"},
 	}
 	_, err = NewWatcher(config)
 	if err == nil {
@@ -112,10 +112,10 @@ func TestNewWatcher(t *testing.T) {
 	}
 
 	config = Config{
-		RootDirPath:   "fdf",
-		FileSuffixes:  []string{".bla"},
-		Changes:       make(chan Change),
-		ScanFunc:      ScanFilesInDirectory,
+		RootDirPath:  "fdf",
+		ScanCriteria: []string{".bla"},
+		Changes:      make(chan Change),
+		ScanFunc:     ScanFilesInDirectory,
 	}
 	_, err = NewWatcher(config)
 	if err != nil {
@@ -127,7 +127,7 @@ func TestDefaultWatcherScanFilesInDirectory_Start(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
@@ -169,7 +169,7 @@ func TestDefaultWatcherScanFilesInDirectory_StartMultipleTimes(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
@@ -208,7 +208,7 @@ func TestDefaultWatcherScanFilesInDirectory_Stop(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
@@ -244,7 +244,7 @@ func TestDefaultWatcherScanFilesInDirectory_StopWithoutStart(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
@@ -278,7 +278,7 @@ func TestDefaultWatcherScanFilesInDirectory_StartStopStartStop(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
@@ -360,7 +360,7 @@ func TestDefaultWatcherScanFilesInDirectory_StopMultipleTimes(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
@@ -400,7 +400,7 @@ func TestDefaultWatcherScanFilesInDirectory_Destroy(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
@@ -449,7 +449,7 @@ func TestDefaultWatcherScanFilesInDirectory_DestroyMultipleTimes(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInDirectory,
 	}
@@ -502,7 +502,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_Start(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
@@ -544,7 +544,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartMultipleTimes(t *testing.T
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
@@ -583,7 +583,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_Stop(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
@@ -619,7 +619,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StopWithoutStart(t *testing.T) 
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
@@ -653,7 +653,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StartStopStartStop(t *testing.T
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  testDataDirPath(),
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
@@ -737,7 +737,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_StopMultipleTimes(t *testing.T)
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  current,
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
@@ -779,7 +779,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_Destroy(t *testing.T) {
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  current,
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}
@@ -830,7 +830,7 @@ func TestDefaultWatcherScanFilesInSubdirectories_DestroyMultipleTimes(t *testing
 	config := Config{
 		RefreshDelay: 1 * time.Second,
 		RootDirPath:  current,
-		FileSuffixes: []string{searchFileExt},
+		ScanCriteria: []string{searchFileExt},
 		Changes:      make(chan Change),
 		ScanFunc:     ScanFilesInSubdirectories,
 	}

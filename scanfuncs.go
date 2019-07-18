@@ -56,7 +56,7 @@ func ScanFilesInDirectory(config Config) (ScanResult, error) {
 			continue
 		}
 
-		suffix, matches := matchesSuffixes(sub.Name(), config.FileSuffixes)
+		suffix, matches := matchesSuffixes(sub.Name(), config.ScanCriteria)
 		if !matches {
 			continue
 		}
@@ -124,7 +124,7 @@ func ScanFilesInSubdirectories(config Config) (ScanResult, error) {
 				continue
 			}
 
-			suffix, matches := matchesSuffixes(c.Name(), config.FileSuffixes)
+			suffix, matches := matchesSuffixes(c.Name(), config.ScanCriteria)
 			if !matches {
 				continue
 			}
