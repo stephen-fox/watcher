@@ -25,7 +25,7 @@ func main() {
 	watcherConfig := watcher.Config{
 		ScanFunc:     watcher.ScanFilesInDirectory,
 		RootDirPath:  "/tmp",
-		FileSuffixes: []string{
+		ScanCriteria: []string{
 			".txt",
 		},
 		Changes: make(chan watcher.Change),
