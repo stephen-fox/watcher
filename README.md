@@ -1,7 +1,5 @@
 # watcher
-
-## What is it?
-A Go library for watching files in a given directory.
+A Go library for watching files.
 
 ## How does it work?
 It is pretty basic at the moment. The library provides an object that scans on
